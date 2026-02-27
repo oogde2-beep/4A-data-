@@ -1,0 +1,1552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Data Detective — Year 4 Statistics Game</title>
+<style>
+  :root {
+    --blue:    #2E86AB;
+    --orange:  #F18F01;
+    --green:   #06A77D;
+    --purple:  #7B2D8B;
+    --red:     #C73E1D;
+    --yellow:  #FFD166;
+    --bg:      #F0F7FF;
+    --card:    #FFFFFF;
+    --dark:    #1A1A2E;
+    --text:    #2C3E50;
+    --radius:  20px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ---- STARS BACKGROUND ---- */
+  .stars {
+    position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0;
+  }
+  .star {
+    position: absolute;
+    border-radius: 50%;
+    background: var(--yellow);
+    opacity: 0.15;
+    animation: twinkle 3s infinite;
+  }
+
+  @keyframes twinkle {
+    0%,100% { opacity: 0.1; transform: scale(1); }
+    50%      { opacity: 0.3; transform: scale(1.3); }
+  }
+
+  /* ---- SCREENS ---- */
+  .screen {
+    position: relative; z-index: 1;
+    min-height: 100vh;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 20px 16px 40px;
+  }
+  .screen.active { display: flex; }
+
+  /* ---- HOME SCREEN ---- */
+  #home {
+    background: linear-gradient(160deg, #1A1A2E 0%, #16213E 50%, #0F3460 100%);
+    justify-content: center;
+    text-align: center;
+  }
+
+  .home-badge {
+    background: var(--yellow);
+    color: var(--dark);
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 14px;
+    padding: 6px 18px;
+    border-radius: 50px;
+    margin-bottom: 16px;
+    display: inline-block;
+    letter-spacing: 1px;
+  }
+
+  .home-title {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: clamp(36px, 8vw, 64px);
+    color: #fff;
+    line-height: 1.1;
+    margin-bottom: 8px;
+    text-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+
+  .home-subtitle {
+    font-size: 16px;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 32px;
+  }
+
+  .magnifier {
+    font-size: 80px;
+    margin-bottom: 16px;
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%,100% { transform: translateY(0); }
+    50%      { transform: translateY(-12px); }
+  }
+
+  .levels-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    width: 100%;
+    max-width: 500px;
+    margin-bottom: 24px;
+  }
+
+  .level-btn {
+    background: rgba(255,255,255,0.1);
+    border: 2px solid rgba(255,255,255,0.2);
+    border-radius: var(--radius);
+    padding: 16px 12px;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 800;
+    font-size: 14px;
+  }
+
+  .level-btn:hover, .level-btn:active {
+    background: rgba(255,255,255,0.2);
+    border-color: var(--yellow);
+    transform: translateY(-2px);
+  }
+
+  .level-btn.locked {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .level-btn .level-emoji { font-size: 28px; display: block; margin-bottom: 4px; }
+  .level-btn .level-name { display: block; font-size: 13px; opacity: 0.85; }
+  .level-btn .level-stars { display: block; font-size: 16px; margin-top: 4px; }
+
+  .play-btn {
+    background: linear-gradient(135deg, var(--yellow), #FF9500);
+    color: var(--dark);
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 22px;
+    border: none;
+    border-radius: 50px;
+    padding: 16px 48px;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(241,143,1,0.4);
+    transition: all 0.2s;
+    letter-spacing: 1px;
+  }
+
+  .play-btn:hover, .play-btn:active { transform: translateY(-2px) scale(1.03); }
+
+  /* ---- GAME SCREEN ---- */
+  #game {
+    background: var(--bg);
+    max-width: 640px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .game-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    background: var(--dark);
+    border-radius: var(--radius);
+    color: #fff;
+  }
+
+  .header-left { font-size: 13px; opacity: 0.7; }
+  .header-center { font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif; font-size: 20px; color: var(--yellow); }
+
+  .score-display {
+    background: var(--yellow);
+    color: var(--dark);
+    font-weight: 900;
+    font-size: 15px;
+    padding: 4px 12px;
+    border-radius: 50px;
+  }
+
+  .progress-bar-wrap {
+    width: 100%;
+    background: #ddd;
+    border-radius: 50px;
+    height: 10px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--green), var(--blue));
+    border-radius: 50px;
+    transition: width 0.5s ease;
+  }
+
+  /* ---- QUESTION CARD ---- */
+  .q-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 24px;
+    width: 100%;
+    box-shadow: 0 6px 30px rgba(0,0,0,0.1);
+    margin-bottom: 16px;
+    animation: slideIn 0.3s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .q-category {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding: 4px 12px;
+    border-radius: 50px;
+    margin-bottom: 12px;
+    color: #fff;
+  }
+
+  .q-text {
+    font-size: clamp(16px, 4vw, 20px);
+    font-weight: 700;
+    line-height: 1.4;
+    margin-bottom: 20px;
+    color: var(--dark);
+  }
+
+  .q-visual {
+    background: #F8FBFF;
+    border: 2px solid #E0ECFF;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 20px;
+    text-align: center;
+    font-size: clamp(20px, 5vw, 28px);
+    letter-spacing: 4px;
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    color: var(--dark);
+  }
+
+  .q-hint {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 16px;
+    font-style: italic;
+  }
+
+  /* ---- ANSWER OPTIONS ---- */
+  .options-grid {
+    display: grid;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .options-grid.two-col { grid-template-columns: 1fr 1fr; }
+  .options-grid.one-col { grid-template-columns: 1fr; }
+
+  .option-btn {
+    background: #F8F8F8;
+    border: 2.5px solid #E0E0E0;
+    border-radius: 14px;
+    padding: 14px 16px;
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: clamp(14px, 3.5vw, 17px);
+    font-weight: 700;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: left;
+    line-height: 1.3;
+  }
+
+  .option-btn:hover:not(:disabled), .option-btn:active:not(:disabled) {
+    background: #EEF4FF;
+    border-color: var(--blue);
+    transform: translateY(-1px);
+  }
+
+  .option-btn.correct {
+    background: #D4FAEA;
+    border-color: var(--green);
+    color: #065F46;
+    animation: pop 0.3s ease;
+  }
+
+  .option-btn.wrong {
+    background: #FFE4E4;
+    border-color: var(--red);
+    color: #7F1D1D;
+    animation: shake 0.4s ease;
+  }
+
+  @keyframes pop {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25%     { transform: translateX(-6px); }
+    75%     { transform: translateX(6px); }
+  }
+
+  /* ---- DRAG AND DROP ---- */
+  .drag-area {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+    min-height: 50px;
+  }
+
+  .drag-chip {
+    background: var(--dark);
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: grab;
+    transition: all 0.15s;
+    user-select: none;
+    touch-action: none;
+  }
+
+  .drag-chip:active { transform: scale(1.05); cursor: grabbing; opacity: 0.85; }
+  .drag-chip.placed { display: none; }
+
+  .drop-zones {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .drop-zone {
+    background: #F0F7FF;
+    border: 2.5px dashed #A0C4E8;
+    border-radius: 14px;
+    padding: 12px;
+    min-height: 120px;
+    transition: all 0.2s;
+  }
+
+  .drop-zone.over {
+    background: #DCEEFF;
+    border-color: var(--blue);
+  }
+
+  .drop-zone h3 {
+    font-size: 13px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    color: var(--blue);
+  }
+
+  .drop-zone .placed-chip {
+    background: var(--blue);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 12px;
+    margin: 3px;
+    display: inline-block;
+  }
+
+  .drop-zone .placed-chip.wrong-zone { background: var(--red); }
+  .drop-zone .placed-chip.right-zone { background: var(--green); }
+
+  /* ---- TALLY GAME ---- */
+  .tally-display {
+    font-size: clamp(28px, 7vw, 42px);
+    letter-spacing: 8px;
+    font-weight: 900;
+    color: var(--dark);
+    background: #F8FBFF;
+    border: 2px solid #E0ECFF;
+    border-radius: 14px;
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 16px;
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.5;
+  }
+
+  .tally-hint {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+
+  .tally-ref {
+    background: #fff;
+    border: 1.5px solid #ddd;
+    border-radius: 10px;
+    padding: 8px 4px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .tally-ref .marks { font-size: 14px; display: block; margin-bottom: 2px; color: var(--dark); }
+  .tally-ref .num { color: var(--blue); }
+
+  .number-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .num-btn {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    border: 2.5px solid var(--blue);
+    background: #fff;
+    font-size: 24px;
+    font-weight: 900;
+    color: var(--blue);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .num-btn:hover, .num-btn:active { background: var(--blue); color: #fff; }
+
+  .num-display {
+    flex: 1;
+    text-align: center;
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 40px;
+    color: var(--dark);
+    background: #F8FBFF;
+    border: 2.5px solid #E0ECFF;
+    border-radius: 14px;
+    padding: 8px;
+  }
+
+  .submit-btn {
+    width: 100%;
+    background: linear-gradient(135deg, var(--blue), var(--purple));
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    padding: 16px;
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+  }
+
+  .submit-btn:hover, .submit-btn:active { transform: translateY(-2px); opacity: 0.95; }
+  .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* ---- FEEDBACK ---- */
+  .feedback {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 18px;
+    border-radius: 14px;
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 12px;
+    animation: slideIn 0.3s ease;
+  }
+
+  .feedback.correct { background: #D4FAEA; color: #065F46; border: 2px solid #06A77D; }
+  .feedback.wrong   { background: #FFE4E4; color: #7F1D1D; border: 2px solid #C73E1D; }
+  .feedback.show    { display: flex; }
+
+  .feedback-icon { font-size: 24px; }
+
+  .next-btn {
+    width: 100%;
+    background: linear-gradient(135deg, var(--orange), #FF6B35);
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    padding: 16px;
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+    display: none;
+  }
+
+  .next-btn.show { display: block; animation: slideIn 0.3s ease; }
+  .next-btn:hover, .next-btn:active { transform: translateY(-2px); }
+
+  /* ---- RESULTS SCREEN ---- */
+  #results {
+    background: linear-gradient(160deg, #1A1A2E 0%, #16213E 50%, #0F3460 100%);
+    justify-content: center;
+    text-align: center;
+    color: #fff;
+  }
+
+  .results-trophy { font-size: 80px; animation: float 3s ease-in-out infinite; margin-bottom: 16px; }
+  .results-title { font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif; font-size: 40px; margin-bottom: 8px; color: var(--yellow); }
+  .results-score { font-size: 18px; opacity: 0.85; margin-bottom: 24px; }
+
+  .results-bars {
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto 28px;
+  }
+
+  .result-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .result-bar-label { font-size: 12px; width: 100px; text-align: right; opacity: 0.8; }
+  .result-bar-track { flex: 1; background: rgba(255,255,255,0.1); border-radius: 50px; height: 12px; overflow: hidden; }
+  .result-bar-fill  { height: 100%; border-radius: 50px; transition: width 1s ease; }
+  .result-bar-num   { font-size: 12px; font-weight: 800; width: 40px; text-align: left; color: var(--yellow); }
+
+  .star-rating { font-size: 40px; margin-bottom: 24px; letter-spacing: 4px; }
+
+  .results-btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .results-btn {
+    background: rgba(255,255,255,0.15);
+    border: 2px solid rgba(255,255,255,0.3);
+    color: #fff;
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 18px;
+    padding: 14px 28px;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .results-btn.primary { background: var(--yellow); color: var(--dark); border-color: var(--yellow); }
+  .results-btn:hover, .results-btn:active { transform: translateY(-2px); }
+
+  /* ---- UTILITY ---- */
+  .badge-pill {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 50px;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #fff;
+    margin-bottom: 10px;
+  }
+
+  .mt-16 { margin-top: 16px; }
+  .text-center { text-align: center; }
+  .w-full { width: 100%; }
+
+  /* Survey builder */
+  .survey-builder {
+    background: #F8FBFF;
+    border: 2px solid #E0ECFF;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .survey-builder h3 { font-size: 13px; font-weight: 800; color: var(--blue); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .survey-q-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .survey-q-btn {
+    background: #fff;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    padding: 10px;
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: left;
+    color: var(--text);
+  }
+  .survey-q-btn.selected { background: #EEF4FF; border-color: var(--blue); color: var(--blue); }
+  .survey-q-btn.correct-pick { background: #D4FAEA; border-color: var(--green); color: #065F46; }
+  .survey-q-btn.wrong-pick  { background: #FFE4E4; border-color: var(--red); color: #7F1D1D; }
+
+  /* Loading overlay */
+  .loading { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 999; align-items: center; justify-content: center; }
+  .loading.show { display: flex; }
+  .loading-inner { background: #fff; border-radius: 20px; padding: 32px; text-align: center; font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif; font-size: 24px; color: var(--dark); }
+  .loading-spinner { font-size: 48px; animation: spin 1s linear infinite; display: block; margin-bottom: 12px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- DECORATIVE STARS -->
+<div class="stars" id="starsContainer"></div>
+
+<!-- ===================== HOME SCREEN ===================== -->
+<div class="screen active" id="home">
+  <div class="magnifier">🔍</div>
+  <div class="home-badge">Year 4 Statistics — Week 1</div>
+  <h1 class="home-title">Data<br>Detective!</h1>
+  <p class="home-subtitle">Collect clues. Crack the data. Become a Stats Star! ⭐</p>
+
+  <div class="levels-grid">
+    <button class="level-btn" onclick="startLevel(0)">
+      <span class="level-emoji">🗂️</span>
+      <span style="font-size:15px;font-weight:900;">Level 1</span>
+      <span class="level-name">What is Data?</span>
+      <span class="level-stars" id="stars-0">☆☆☆</span>
+    </button>
+    <button class="level-btn" onclick="startLevel(1)">
+      <span class="level-emoji">✏️</span>
+      <span style="font-size:15px;font-weight:900;">Level 2</span>
+      <span class="level-name">Tally Marks</span>
+      <span class="level-stars" id="stars-1">☆☆☆</span>
+    </button>
+    <button class="level-btn" onclick="startLevel(2)">
+      <span class="level-emoji">🏷️</span>
+      <span style="font-size:15px;font-weight:900;">Level 3</span>
+      <span class="level-name">Sort the Data</span>
+      <span class="level-stars" id="stars-2">☆☆☆</span>
+    </button>
+    <button class="level-btn" onclick="startLevel(3)">
+      <span class="level-emoji">📋</span>
+      <span style="font-size:15px;font-weight:900;">Level 4</span>
+      <span class="level-name">Survey Builder</span>
+      <span class="level-stars" id="stars-3">☆☆☆</span>
+    </button>
+  </div>
+
+  <button class="play-btn" onclick="startLevel(0)">▶ START PLAYING</button>
+</div>
+
+<!-- ===================== GAME SCREEN ===================== -->
+<div class="screen" id="game">
+  <div style="width:100%;max-width:600px;">
+    <div class="game-header">
+      <div class="header-left" id="levelLabel">Level 1</div>
+      <div class="header-center" id="levelTitle">Data Detective</div>
+      <div class="score-display">⭐ <span id="scoreDisplay">0</span></div>
+    </div>
+
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" id="progressBar" style="width:0%"></div>
+    </div>
+
+    <!-- Question card -->
+    <div class="q-card" id="qCard">
+      <div class="q-category badge-pill" id="qCategory" style="background:var(--blue)">Category</div>
+      <div class="q-text" id="qText">Question text here</div>
+      <div class="q-visual" id="qVisual" style="display:none"></div>
+      <div class="q-hint" id="qHint"></div>
+
+      <!-- Multiple choice -->
+      <div class="options-grid two-col" id="optionsGrid"></div>
+
+      <!-- Number input for tally -->
+      <div id="tallyInput" style="display:none">
+        <div class="tally-hint">
+          <div class="tally-ref"><span class="marks">|</span><span class="num">= 1</span></div>
+          <div class="tally-ref"><span class="marks">||</span><span class="num">= 2</span></div>
+          <div class="tally-ref"><span class="marks">|||</span><span class="num">= 3</span></div>
+          <div class="tally-ref"><span class="marks">||||</span><span class="num">= 4</span></div>
+          <div class="tally-ref"><span class="marks" style="text-decoration:line-through">||||</span><span class="num">= 5</span></div>
+        </div>
+        <div class="number-input-wrap">
+          <button class="num-btn" onclick="changeNum(-1)">−</button>
+          <div class="num-display" id="numDisplay">0</div>
+          <button class="num-btn" onclick="changeNum(1)">+</button>
+        </div>
+        <button class="submit-btn" onclick="checkTally()">Check My Answer!</button>
+      </div>
+
+      <!-- Drag and drop sort -->
+      <div id="dragSort" style="display:none">
+        <div class="drag-area" id="chipPool"></div>
+        <div class="drop-zones">
+          <div class="drop-zone" id="catZone" ondragover="allowDrop(event)" ondrop="dropChip(event,'cat')" ontouchend="touchDrop(event,'cat')">
+            <h3>🏷️ Categorical</h3>
+            <div id="catDropped"></div>
+          </div>
+          <div class="drop-zone" id="numZone" ondragover="allowDrop(event)" ondrop="dropChip(event,'num')" ontouchend="touchDrop(event,'num')">
+            <h3>🔢 Numerical</h3>
+            <div id="numDropped"></div>
+          </div>
+        </div>
+        <button class="submit-btn mt-16" onclick="checkSort()">Check My Sorting!</button>
+      </div>
+
+      <!-- Survey builder -->
+      <div id="surveyBuilder" style="display:none">
+        <div class="survey-builder">
+          <h3 id="surveyPrompt">Choose the best survey question:</h3>
+          <div class="survey-q-options" id="surveyOptions"></div>
+        </div>
+        <button class="submit-btn" id="surveySubmit" onclick="checkSurvey()" disabled>Submit My Choice</button>
+      </div>
+    </div>
+
+    <!-- Feedback -->
+    <div class="feedback" id="feedback">
+      <span class="feedback-icon" id="feedbackIcon">✅</span>
+      <span id="feedbackText">Great work!</span>
+    </div>
+
+    <!-- Next button -->
+    <button class="next-btn" id="nextBtn" onclick="nextQuestion()">Next Question →</button>
+
+    <!-- Home button -->
+    <div style="text-align:center;margin-top:16px;">
+      <button onclick="goHome()" style="background:none;border:none;color:#888;font-size:13px;cursor:pointer;font-family:-apple-system,Arial,sans-serif;">← Back to Menu</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== RESULTS SCREEN ===================== -->
+<div class="screen" id="results">
+  <div class="results-trophy" id="trophyEmoji">🏆</div>
+  <div class="results-title" id="resultsTitle">Level Complete!</div>
+  <div class="results-score" id="resultsScore">You scored 7 out of 10 points!</div>
+  <div class="star-rating" id="starRating">⭐⭐⭐</div>
+
+  <div class="results-bars" id="resultsBars"></div>
+
+  <div id="resultsMessage" style="max-width:320px;margin:0 auto 24px;font-size:15px;opacity:0.85;line-height:1.6;"></div>
+
+  <div class="results-btns">
+    <button class="results-btn" onclick="replayLevel()">🔄 Play Again</button>
+    <button class="results-btn primary" onclick="goHome()">🏠 Menu</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  GAME DATA — All 4 Levels
+// ============================================================
+
+const LEVELS = [
+
+  // ---- LEVEL 1: What is Data? ----
+  {
+    id: 0,
+    name: "What is Data?",
+    emoji: "🗂️",
+    color: "#2E86AB",
+    questions: [
+      {
+        type: "mc",
+        category: "What is Data?",
+        text: "What is DATA?",
+        options: [
+          "Information we collect to answer a question 📋",
+          "A type of graph 📊",
+          "A way to draw pictures 🎨",
+          "A maths equation ➕"
+        ],
+        correct: 0,
+        feedback: "✅ Data is information we collect to answer a question — like finding out which sandwich filling is most popular!",
+        wrongFeedback: "Not quite! Data is the information we collect — like asking people questions and writing down their answers."
+      },
+      {
+        type: "mc",
+        category: "Statistical Investigation",
+        text: "Why do we collect data?",
+        options: [
+          "To make our books look nice 📖",
+          "To answer a question or find out something 🔍",
+          "Because the teacher tells us to 👩‍🏫",
+          "To practise our handwriting ✏️"
+        ],
+        correct: 1,
+        feedback: "✅ We collect data to answer a question — for example, 'Which sandwich filling should we make for the class party?'",
+        wrongFeedback: "Close! We collect data to answer a question we want to find out about."
+      },
+      {
+        type: "mc",
+        category: "Real Life Data",
+        text: "Which of these is an example of collecting DATA?",
+        options: [
+          "Drawing a picture of a dog 🐕",
+          "Writing a story about your weekend 📝",
+          "Asking your class 'What is your favourite fruit?' and writing down their answers 🍎",
+          "Reading a book about dinosaurs 🦕"
+        ],
+        correct: 2,
+        feedback: "✅ Asking people a question and recording their answers is collecting data! That's called a SURVEY.",
+        wrongFeedback: "Think about which one involves asking people questions and writing down the answers — that's collecting data!"
+      },
+      {
+        type: "mc",
+        category: "Statistical Investigation",
+        text: "What is a STATISTICAL INVESTIGATION?",
+        options: [
+          "A science experiment with chemicals 🧪",
+          "Collecting data to answer a question, making a graph, and explaining what you found 📊",
+          "Solving hard maths sums ➕",
+          "Writing a story with lots of details 📖"
+        ],
+        correct: 1,
+        feedback: "✅ A statistical investigation is the full process: ask a question → collect data → make a graph → explain your findings!",
+        wrongFeedback: "A statistical investigation is the whole process of collecting data and using it to answer a question."
+      },
+      {
+        type: "mc",
+        category: "Survey Questions",
+        text: "Your teacher wants to plan the class morning tea. Which question would help collect the MOST useful data?",
+        options: [
+          "Do you like food? 🤔",
+          "What is your name? 👤",
+          "What is your favourite sandwich filling — Vegemite, Cheese, Ham or Salad? 🥪",
+          "How old are you? 🎂"
+        ],
+        correct: 2,
+        feedback: "✅ A great survey question gives people clear choices to pick from — this helps us compare the results easily!",
+        wrongFeedback: "Think about which question gives clear choices AND is related to planning the morning tea."
+      },
+      {
+        type: "mc",
+        category: "Survey Design",
+        text: "What does a good survey question need?",
+        options: [
+          "A clear question AND a list of choices to choose from 📋",
+          "Only a yes or no answer",
+          "Lots of long paragraphs to read",
+          "No choices — just ask anything"
+        ],
+        correct: 0,
+        feedback: "✅ A good survey question is clear AND gives people choices — this makes the data easy to compare!",
+        wrongFeedback: "A good survey question is clear and gives people specific choices to pick from."
+      },
+    ]
+  },
+
+  // ---- LEVEL 2: Tally Marks ----
+  {
+    id: 1,
+    name: "Tally Marks",
+    emoji: "✏️",
+    color: "#06A77D",
+    questions: [
+      {
+        type: "tally",
+        category: "Tally Marks",
+        text: "Count the tally marks. How many students chose Apple?",
+        visual: "|||| |",
+        correct: 6,
+        hint: "Remember: |||| = 4, then count the extra marks",
+        feedback: "✅ Correct! |||| | = 4 + 1 = 6 students. The group of 4 counts as one bundle!",
+        wrongFeedback: "Hint: |||| means 4 (a bundle of 5 with the cross line). Then | = 1 more. 4 + 1 = 6"
+      },
+      {
+        type: "tally",
+        category: "Tally Marks",
+        text: "Count the tally marks. How many students chose Banana?",
+        visual: "|||| ||||",
+        correct: 9,
+        hint: "Remember: Each crossed group = 5. Count bundles of 5 first!",
+        feedback: "✅ Great! |||| |||| = 4 + 5 = ... wait, let's count: first group is 4 tallies (no cross = 4), second is |||| = 4. So 4 + 4 = 8... Actually |||| |||| = 4+4 = 8 if no cross marks. If the first |||| has a line through = 5, then 5+4=9. The visual shows 9!",
+        wrongFeedback: "Count the first group (|||| with cross = 5), then the second group (|||| = 4). 5 + 4 = 9!"
+      },
+      {
+        type: "tally",
+        category: "Tally Marks",
+        text: "Count the tally marks. How many people chose Mango?",
+        visual: "|||| |||| |||",
+        correct: 13,
+        hint: "Break it into groups. Each crossed |||| = 5",
+        feedback: "✅ Brilliant! 5 + 5 + 3 = 13. Counting in 5s makes tally marks super fast to read!",
+        wrongFeedback: "Count the groups: first |||| = 5, second |||| = 5, then ||| = 3. So 5 + 5 + 3 = 13"
+      },
+      {
+        type: "mc",
+        category: "Tally Marks",
+        text: "Why do we use tally marks to record survey data?",
+        options: [
+          "They look pretty on the page 🎨",
+          "We can record answers QUICKLY while someone is talking to us ✏️",
+          "The teacher said to",
+          "They are the only way to write numbers"
+        ],
+        correct: 1,
+        feedback: "✅ Tally marks let us record answers super fast — one mark per answer — while we're in the middle of surveying people!",
+        wrongFeedback: "Think about what makes tally marks useful when you're busy asking people questions!"
+      },
+      {
+        type: "mc",
+        category: "Tally Marks",
+        text: "In tally marks, how many does this group represent: ||||̶  (four marks with a diagonal cross)?",
+        visual: "||||",
+        options: [
+          "4 (four straight marks)",
+          "5 (four marks + the diagonal cross line = 5)",
+          "6",
+          "3"
+        ],
+        correct: 1,
+        feedback: "✅ The diagonal cross through 4 marks = 5! This is the trick — it makes counting in 5s very easy.",
+        wrongFeedback: "When you put a diagonal line through 4 marks, the whole group = 5. It's like bundling them together!"
+      },
+      {
+        type: "tally",
+        category: "Tally Marks",
+        text: "Your class did a survey on favourite colours. Count how many chose Blue.",
+        visual: "|||| ||",
+        correct: 7,
+        hint: "First group = 5 (four + cross), then count the remaining marks",
+        feedback: "✅ Spot on! 5 + 2 = 7 students chose Blue. You're getting great at reading tally marks!",
+        wrongFeedback: "The first group |||| (with cross) = 5. Then || = 2 more. 5 + 2 = 7!"
+      },
+    ]
+  },
+
+  // ---- LEVEL 3: Sort the Data ----
+  {
+    id: 2,
+    name: "Sort the Data",
+    emoji: "🏷️",
+    color: "#7B2D8B",
+    questions: [
+      {
+        type: "mc",
+        category: "Types of Data",
+        text: "What is CATEGORICAL data?",
+        options: [
+          "Data with numbers only 🔢",
+          "Data that fits into GROUPS or LABELS (like colours or types of food) 🏷️",
+          "Data from experiments only 🔬",
+          "Data that uses decimals ."
+        ],
+        correct: 1,
+        feedback: "✅ Categorical data fits into GROUPS — like 'Vegemite, Cheese, Ham, Salad'. Each answer belongs to a category!",
+        wrongFeedback: "Categorical means 'categories' — groups or labels. Like types of pets, favourite colours, or sandwich fillings!"
+      },
+      {
+        type: "mc",
+        category: "Types of Data",
+        text: "What is NUMERICAL data?",
+        options: [
+          "Data about people's names 👤",
+          "Data that uses NUMBERS to count or measure something 🔢",
+          "Data about favourite colours 🌈",
+          "Data about types of animals 🐾"
+        ],
+        correct: 1,
+        feedback: "✅ Numerical data uses numbers! Like 'How many sandwich triangles do you want?' — the answer is always a number.",
+        wrongFeedback: "Numerical = numbers! If the answer is a number (like 3, 4, 5 or 6), it's numerical data."
+      },
+      {
+        type: "mc",
+        category: "Identify Data Type",
+        text: "Survey question: 'What is your favourite sandwich filling?'\nAnswers: Vegemite / Cheese / Ham / Salad\n\nWhat TYPE of data is this?",
+        options: [
+          "Numerical data 🔢",
+          "Categorical data 🏷️",
+          "Both types",
+          "Neither type"
+        ],
+        correct: 1,
+        feedback: "✅ Categorical! The answers are LABELS (Vegemite, Cheese, Ham, Salad) — they're groups, not numbers.",
+        wrongFeedback: "The answers (Vegemite, Cheese, Ham, Salad) are labels/groups — that makes it CATEGORICAL data!"
+      },
+      {
+        type: "mc",
+        category: "Identify Data Type",
+        text: "Survey question: 'How many sandwich triangles would you like — 3, 4, 5 or 6?'\n\nWhat TYPE of data is this?",
+        options: [
+          "Categorical data 🏷️",
+          "Numerical data 🔢",
+          "Picture data",
+          "Story data"
+        ],
+        correct: 1,
+        feedback: "✅ Numerical! The answers are all numbers (3, 4, 5, 6). When you count or measure, it's numerical data.",
+        wrongFeedback: "The answers are 3, 4, 5 or 6 — they're NUMBERS! Numbers = Numerical data."
+      },
+      {
+        type: "mc",
+        category: "Identify Data Type",
+        text: "Which of these survey questions would give you CATEGORICAL data?",
+        options: [
+          "How many pets do you have? 🐾",
+          "How old are you? 🎂",
+          "What is your favourite sport — Soccer, Swimming, Tennis or Cricket? ⚽",
+          "How far do you walk to school (in minutes)? 🚶"
+        ],
+        correct: 2,
+        feedback: "✅ 'What is your favourite sport?' gives categories (Soccer, Swimming, etc.) — that's categorical data!",
+        wrongFeedback: "Look for the question where answers are NAMES or LABELS, not numbers. Favourite sport gives you names!"
+      },
+      {
+        type: "mc",
+        category: "Real Investigation",
+        text: "For the sandwich investigation, we need to know:\n1. Which FILLING to make\n2. How many TRIANGLES per person\n\nWhich statement is correct?",
+        options: [
+          "Both questions give categorical data 🏷️",
+          "Both questions give numerical data 🔢",
+          "Question 1 = categorical 🏷️, Question 2 = numerical 🔢",
+          "Question 1 = numerical 🔢, Question 2 = categorical 🏷️"
+        ],
+        correct: 2,
+        feedback: "✅ Perfect! Filling type = categorical (labels like Vegemite). Number of triangles = numerical (3, 4, 5 or 6). Our investigation uses BOTH types!",
+        wrongFeedback: "Filling type gives labels (Vegemite/Cheese = categorical). Number of triangles gives numbers (3/4/5/6 = numerical)!"
+      },
+    ]
+  },
+
+  // ---- LEVEL 4: Survey Builder ----
+  {
+    id: 3,
+    name: "Survey Builder",
+    emoji: "📋",
+    color: "#F18F01",
+    questions: [
+      {
+        type: "survey",
+        category: "Survey Design",
+        text: "🥪 Your teacher wants to plan the class morning tea.\n\nWhich is the BEST survey question to find out what sandwich filling to make?",
+        options: [
+          { text: "Do you like sandwiches?", label: "❌ Yes/No only — doesn't tell us WHICH filling!", correct: false },
+          { text: "What sandwich filling do you prefer — Vegemite, Cheese, Ham or Salad?", label: "✅ Clear question with specific choices!", correct: true },
+          { text: "Tell me about your favourite food.", label: "❌ Too vague — no categories to compare!", correct: false },
+          { text: "What is your name?", label: "❌ Doesn't tell us anything about fillings!", correct: false },
+        ],
+        feedback: "✅ A great survey question is SPECIFIC and gives clear categories to choose from. This helps us compare the data easily!",
+        wrongFeedback: "Look for the question that (1) is about sandwich fillings AND (2) gives specific choices to pick from."
+      },
+      {
+        type: "survey",
+        category: "Survey Design",
+        text: "🔢 You want to find out how many sandwich triangles students want.\n\nWhich is the BEST survey question?",
+        options: [
+          { text: "Would you like lots of triangles?", label: "❌ 'Lots' is not a number!", correct: false },
+          { text: "How many triangles do you want — 3, 4, 5 or 6?", label: "✅ Specific number choices — perfect!", correct: true },
+          { text: "What do you think about sandwiches?", label: "❌ Doesn't ask about triangles at all!", correct: false },
+          { text: "Do you want sandwiches?", label: "❌ Only yes/no — not helpful!", correct: false },
+        ],
+        feedback: "✅ Giving specific number choices (3, 4, 5 or 6) makes it easy to record and compare the data!",
+        wrongFeedback: "The best question gives specific NUMBER choices to pick from — not 'lots' or 'a bit'."
+      },
+      {
+        type: "mc",
+        category: "Survey Design",
+        text: "You are going to survey your class. How many people should you survey to get RELIABLE results?",
+        options: [
+          "Just 1 person (your best friend) 👤",
+          "Just 2 people (yourself and one friend) 👥",
+          "At least 20 people from the class 👨‍👩‍👧‍👦",
+          "You don't need to ask anyone — just guess!"
+        ],
+        correct: 2,
+        feedback: "✅ The more people you survey, the more reliable your data! We should survey at least 20 people to get a good result.",
+        wrongFeedback: "If you only ask 1 or 2 people, the data might not represent everyone! Aim for at least 20 people."
+      },
+      {
+        type: "survey",
+        category: "Survey Design",
+        text: "📊 After collecting data, what do we do NEXT in a statistical investigation?",
+        options: [
+          { text: "Put the book away and go to lunch! 🍽️", label: "❌ We haven't finished yet!", correct: false },
+          { text: "Turn our tally table into a GRAPH to show the data visually 📊", label: "✅ Making a graph helps us see patterns!", correct: true },
+          { text: "Write a story about the data 📖", label: "❌ We need a graph first!", correct: false },
+          { text: "Change the data so it looks better 😅", label: "❌ We NEVER change data to make it look different!", correct: false },
+        ],
+        feedback: "✅ After collecting data, we CREATE A GRAPH — like a picture graph or column graph. Graphs make patterns easy to see!",
+        wrongFeedback: "After collecting data in a tally table, the next step is turning it into a graph so we can see the patterns."
+      },
+      {
+        type: "mc",
+        category: "Survey Skills",
+        text: "You surveyed 24 students about their favourite fruit. Apple got 10 votes, Banana got 6 votes, Mango got 5 votes, and Grapes got 3 votes. Which fruit is MOST popular?",
+        options: [
+          "Banana 🍌 (6 votes)",
+          "Mango 🥭 (5 votes)",
+          "Apple 🍎 (10 votes)",
+          "Grapes 🍇 (3 votes)"
+        ],
+        correct: 2,
+        feedback: "✅ Apple is most popular with 10 votes — the highest number! The most popular = the one with the most votes.",
+        wrongFeedback: "Look for the HIGHEST number of votes. Apple got 10, which is more than Banana (6), Mango (5), or Grapes (3)."
+      },
+      {
+        type: "mc",
+        category: "Full Investigation",
+        text: "🏆 FINAL CHALLENGE!\n\nA class surveyed 30 students about sandwich fillings:\n• Vegemite: 12\n• Cheese: 8\n• Ham: 6\n• Salad: 4\n\nWhich THREE fillings should the teacher make?",
+        options: [
+          "Vegemite, Cheese and Ham 🥪 (the top 3 by votes!)",
+          "Salad, Ham and Cheese (alphabetical order)",
+          "Just Vegemite — it's the favourite",
+          "All four, equally 🟰"
+        ],
+        correct: 0,
+        feedback: "🏆 AMAZING! You're a real Data Detective! Vegemite (12), Cheese (8) and Ham (6) are the top 3 — the data supports making these three fillings!",
+        wrongFeedback: "Look at the vote numbers. The TOP 3 are: Vegemite (12 votes), Cheese (8 votes), and Ham (6 votes). Salad only got 4."
+      },
+    ]
+  },
+];
+
+// ============================================================
+//  GAME STATE
+// ============================================================
+let currentLevel = 0;
+let currentQ = 0;
+let score = 0;
+let correctCount = 0;
+let numAnswer = 0;
+let draggedChipId = null;
+let sortAnswers = { cat: [], num: [] };
+let sortCorrect = null;
+let surveySelected = null;
+let levelStars = [0, 0, 0, 0];
+
+// ============================================================
+//  STARS BACKGROUND
+// ============================================================
+(function() {
+  const c = document.getElementById('starsContainer');
+  for (let i = 0; i < 30; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const size = Math.random() * 8 + 4;
+    s.style.cssText = `
+      width:${size}px; height:${size}px;
+      left:${Math.random()*100}%;
+      top:${Math.random()*100}%;
+      animation-delay:${Math.random()*3}s;
+      animation-duration:${2+Math.random()*3}s;
+    `;
+    c.appendChild(s);
+  }
+})();
+
+// ============================================================
+//  SCREEN NAVIGATION
+// ============================================================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function goHome() {
+  updateHomeStars();
+  showScreen('home');
+}
+
+function updateHomeStars() {
+  levelStars.forEach((stars, i) => {
+    const el = document.getElementById('stars-' + i);
+    if (el) el.textContent = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+  });
+}
+
+// ============================================================
+//  START LEVEL
+// ============================================================
+function startLevel(levelIdx) {
+  currentLevel = levelIdx;
+  currentQ = 0;
+  score = 0;
+  correctCount = 0;
+  numAnswer = 0;
+  sortAnswers = { cat: [], num: [] };
+  sortCorrect = null;
+  surveySelected = null;
+
+  const lv = LEVELS[levelIdx];
+  document.getElementById('levelLabel').textContent = `Level ${levelIdx + 1}`;
+  document.getElementById('levelTitle').textContent = lv.name;
+  document.getElementById('scoreDisplay').textContent = '0';
+
+  showScreen('game');
+  renderQuestion();
+}
+
+// ============================================================
+//  RENDER QUESTION
+// ============================================================
+function renderQuestion() {
+  const lv = LEVELS[currentLevel];
+  const q = lv.questions[currentQ];
+  const total = lv.questions.length;
+
+  // Progress
+  document.getElementById('progressBar').style.width = (currentQ / total * 100) + '%';
+
+  // Header
+  document.getElementById('qCategory').textContent = q.category;
+  document.getElementById('qCategory').style.background = lv.color;
+  document.getElementById('qText').textContent = q.text;
+
+  // Visual
+  const vis = document.getElementById('qVisual');
+  if (q.visual) {
+    vis.style.display = 'block';
+    vis.textContent = q.visual;
+  } else {
+    vis.style.display = 'none';
+  }
+
+  // Hint
+  document.getElementById('qHint').textContent = q.hint || '';
+
+  // Hide all input types
+  document.getElementById('optionsGrid').style.display = 'none';
+  document.getElementById('tallyInput').style.display = 'none';
+  document.getElementById('dragSort').style.display = 'none';
+  document.getElementById('surveyBuilder').style.display = 'none';
+
+  // Hide feedback & next
+  hideFeedback();
+  document.getElementById('nextBtn').classList.remove('show');
+
+  if (q.type === 'mc') renderMC(q);
+  else if (q.type === 'tally') renderTally(q);
+  else if (q.type === 'sort') renderSort(q);
+  else if (q.type === 'survey') renderSurvey(q);
+}
+
+// ---- Multiple Choice ----
+function renderMC(q) {
+  const grid = document.getElementById('optionsGrid');
+  grid.style.display = 'grid';
+  grid.className = 'options-grid ' + (q.options.length <= 2 ? 'one-col' : 'two-col');
+  grid.innerHTML = '';
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.textContent = opt;
+    btn.onclick = () => checkMC(i, q, btn);
+    grid.appendChild(btn);
+  });
+}
+
+function checkMC(chosen, q, btn) {
+  const grid = document.getElementById('optionsGrid');
+  grid.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+
+  if (chosen === q.correct) {
+    btn.classList.add('correct');
+    showFeedback(true, q.feedback);
+    addScore(10);
+    correctCount++;
+  } else {
+    btn.classList.add('wrong');
+    grid.querySelectorAll('.option-btn')[q.correct].classList.add('correct');
+    showFeedback(false, q.wrongFeedback || q.feedback);
+  }
+  showNext();
+}
+
+// ---- Tally ----
+function renderTally(q) {
+  numAnswer = 0;
+  document.getElementById('numDisplay').textContent = '0';
+  document.getElementById('tallyInput').style.display = 'block';
+}
+
+function changeNum(delta) {
+  numAnswer = Math.max(0, Math.min(50, numAnswer + delta));
+  document.getElementById('numDisplay').textContent = numAnswer;
+}
+
+function checkTally() {
+  const q = LEVELS[currentLevel].questions[currentQ];
+  const display = document.getElementById('numDisplay');
+  if (numAnswer === q.correct) {
+    display.style.background = '#D4FAEA';
+    display.style.color = '#065F46';
+    showFeedback(true, q.feedback);
+    addScore(10);
+    correctCount++;
+  } else {
+    display.style.background = '#FFE4E4';
+    display.style.color = '#7F1D1D';
+    showFeedback(false, `${q.wrongFeedback || q.feedback} The answer was ${q.correct}.`);
+  }
+  document.querySelector('#tallyInput .submit-btn').disabled = true;
+  showNext();
+}
+
+// ---- Drag Sort ----
+function renderSort(q) {
+  sortAnswers = { cat: [], num: [] };
+  sortCorrect = q;
+  document.getElementById('dragSort').style.display = 'block';
+  document.getElementById('catDropped').innerHTML = '';
+  document.getElementById('numDropped').innerHTML = '';
+
+  const pool = document.getElementById('chipPool');
+  pool.innerHTML = '';
+
+  q.items.forEach((item, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'drag-chip';
+    chip.id = 'chip-' + i;
+    chip.textContent = item.text;
+    chip.draggable = true;
+    chip.dataset.idx = i;
+    chip.ondragstart = e => { draggedChipId = i; };
+    // Touch support
+    chip.ontouchstart = e => { draggedChipId = i; };
+    pool.appendChild(chip);
+  });
+}
+
+function allowDrop(e) { e.preventDefault(); }
+
+function dropChip(e, zone) {
+  e.preventDefault();
+  if (draggedChipId === null) return;
+  placeChip(draggedChipId, zone);
+  draggedChipId = null;
+}
+
+function touchDrop(e, zone) {
+  if (draggedChipId === null) return;
+  placeChip(draggedChipId, zone);
+  draggedChipId = null;
+}
+
+function placeChip(idx, zone) {
+  const q = sortCorrect;
+  const item = q.items[idx];
+  const chip = document.getElementById('chip-' + idx);
+  if (!chip || chip.classList.contains('placed')) return;
+  chip.classList.add('placed');
+
+  // Remove from other zone if already placed
+  if (sortAnswers.cat.includes(idx)) sortAnswers.cat = sortAnswers.cat.filter(x => x !== idx);
+  if (sortAnswers.num.includes(idx)) sortAnswers.num = sortAnswers.num.filter(x => x !== idx);
+
+  sortAnswers[zone].push(idx);
+  const container = document.getElementById(zone + 'Dropped');
+  const placed = document.createElement('div');
+  placed.className = 'placed-chip';
+  placed.textContent = item.text;
+  placed.dataset.idx = idx;
+  placed.onclick = () => returnChip(idx, zone);
+  container.appendChild(placed);
+}
+
+function returnChip(idx, zone) {
+  const container = document.getElementById(zone + 'Dropped');
+  const chips = container.querySelectorAll('.placed-chip');
+  chips.forEach(c => { if (parseInt(c.dataset.idx) === idx) c.remove(); });
+  sortAnswers[zone] = sortAnswers[zone].filter(x => x !== idx);
+  const chip = document.getElementById('chip-' + idx);
+  if (chip) chip.classList.remove('placed');
+}
+
+function checkSort() {
+  const q = sortCorrect;
+  let allCorrect = true;
+  let anyPlaced = sortAnswers.cat.length + sortAnswers.num.length > 0;
+  if (!anyPlaced) return;
+
+  q.items.forEach((item, i) => {
+    const inCat = sortAnswers.cat.includes(i);
+    const inNum = sortAnswers.num.includes(i);
+    if (!inCat && !inNum) { allCorrect = false; return; }
+    const zone = inCat ? 'cat' : 'num';
+    const correctZone = item.type;
+    const container = document.getElementById(zone + 'Dropped');
+    const chips = container.querySelectorAll('.placed-chip');
+    chips.forEach(c => {
+      if (parseInt(c.dataset.idx) === i) {
+        c.classList.add(zone === correctZone ? 'right-zone' : 'wrong-zone');
+        if (zone !== correctZone) allCorrect = false;
+      }
+    });
+  });
+
+  document.querySelector('#dragSort .submit-btn').disabled = true;
+  if (allCorrect) {
+    showFeedback(true, q.feedback);
+    addScore(10);
+    correctCount++;
+  } else {
+    showFeedback(false, q.wrongFeedback || q.feedback);
+  }
+  showNext();
+}
+
+// ---- Survey Builder ----
+function renderSurvey(q) {
+  surveySelected = null;
+  document.getElementById('surveyBuilder').style.display = 'block';
+  document.getElementById('surveyPrompt').textContent = '';
+  document.getElementById('surveySubmit').disabled = true;
+
+  const optWrap = document.getElementById('surveyOptions');
+  optWrap.innerHTML = '';
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'survey-q-btn';
+    btn.textContent = opt.text;
+    btn.onclick = () => {
+      optWrap.querySelectorAll('.survey-q-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      surveySelected = i;
+      document.getElementById('surveySubmit').disabled = false;
+    };
+    optWrap.appendChild(btn);
+  });
+}
+
+function checkSurvey() {
+  const q = LEVELS[currentLevel].questions[currentQ];
+  document.getElementById('surveySubmit').disabled = true;
+  const opts = document.getElementById('surveyOptions').querySelectorAll('.survey-q-btn');
+
+  if (q.options[surveySelected].correct) {
+    opts[surveySelected].classList.add('correct-pick');
+    showFeedback(true, q.feedback);
+    addScore(10);
+    correctCount++;
+  } else {
+    opts[surveySelected].classList.add('wrong-pick');
+    q.options.forEach((opt, i) => {
+      if (opt.correct) opts[i].classList.add('correct-pick');
+    });
+    showFeedback(false, q.wrongFeedback || q.feedback);
+  }
+  showNext();
+}
+
+// ============================================================
+//  FEEDBACK & SCORING
+// ============================================================
+function showFeedback(isCorrect, text) {
+  const fb = document.getElementById('feedback');
+  const icon = document.getElementById('feedbackIcon');
+  const msg = document.getElementById('feedbackText');
+  fb.className = 'feedback show ' + (isCorrect ? 'correct' : 'wrong');
+  icon.textContent = isCorrect ? '🎉' : '🤔';
+  msg.textContent = text;
+}
+
+function hideFeedback() {
+  document.getElementById('feedback').className = 'feedback';
+}
+
+function addScore(pts) {
+  score += pts;
+  const el = document.getElementById('scoreDisplay');
+  el.textContent = score;
+  el.style.transform = 'scale(1.4)';
+  setTimeout(() => el.style.transform = 'scale(1)', 300);
+}
+
+function showNext() {
+  document.getElementById('nextBtn').classList.add('show');
+}
+
+function nextQuestion() {
+  const lv = LEVELS[currentLevel];
+  currentQ++;
+  if (currentQ >= lv.questions.length) {
+    showResults();
+  } else {
+    renderQuestion();
+  }
+}
+
+// ============================================================
+//  RESULTS
+// ============================================================
+function showResults() {
+  const lv = LEVELS[currentLevel];
+  const total = lv.questions.length;
+  const pct = correctCount / total;
+  const stars = pct >= 0.85 ? 3 : pct >= 0.65 ? 2 : pct >= 0.4 ? 1 : 0;
+  levelStars[currentLevel] = Math.max(levelStars[currentLevel], stars);
+
+  const trophies = ['😕', '🌟', '⭐⭐', '🏆'];
+  const titles = ['Keep Trying!', 'Good Work!', 'Great Job!', 'Data Detective!'];
+  const msgs = [
+    `You got ${correctCount} out of ${total} correct. Have another go — you'll do better next time!`,
+    `You got ${correctCount} out of ${total} correct. You're learning! Play again to improve your score.`,
+    `You got ${correctCount} out of ${total} correct. You're almost there — one more try for 3 stars?`,
+    `PERFECT SCORE! You got ${correctCount} out of ${total} correct. You are a brilliant Data Detective! 🔍`
+  ];
+
+  document.getElementById('trophyEmoji').textContent = trophies[stars];
+  document.getElementById('resultsTitle').textContent = titles[stars];
+  document.getElementById('resultsScore').textContent = `You scored ${score} points! (${correctCount}/${total} correct)`;
+  document.getElementById('starRating').textContent = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+  document.getElementById('resultsMessage').textContent = msgs[stars];
+
+  // Result bars
+  const bars = document.getElementById('resultsBars');
+  bars.innerHTML = '';
+  const barData = [
+    { label: 'Your Score', val: score, max: total * 10, color: lv.color },
+    { label: 'Correct', val: correctCount, max: total, color: '#06A77D' },
+  ];
+  barData.forEach(b => {
+    const row = document.createElement('div');
+    row.className = 'result-bar-row';
+    row.innerHTML = `
+      <div class="result-bar-label">${b.label}</div>
+      <div class="result-bar-track">
+        <div class="result-bar-fill" style="width:0%;background:${b.color}" data-pct="${b.val/b.max*100}"></div>
+      </div>
+      <div class="result-bar-num">${b.val}/${b.max}</div>
+    `;
+    bars.appendChild(row);
+  });
+
+  showScreen('results');
+  updateHomeStars();
+
+  // Animate bars
+  setTimeout(() => {
+    document.querySelectorAll('.result-bar-fill').forEach(el => {
+      el.style.width = el.dataset.pct + '%';
+    });
+  }, 300);
+}
+
+function replayLevel() {
+  startLevel(currentLevel);
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+updateHomeStars();
+</script>
+</body>
+</html>
